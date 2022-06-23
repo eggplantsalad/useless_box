@@ -1,0 +1,31 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"python.analysis.logLevel": "Warning",
+		"python.linting.flake8Enabled": true,
+		"python.linting.flake8Args": [
+			"--ignore=E501,W504"
+		],
+		"files.trimTrailingWhitespace": true,
+		"python.testing.pytestEnabled": true,
+		"python.testing.unittestArgs": [
+			"-v",
+			"-s",
+			".",
+			"-p",
+			"test_*.py"
+		],
+		"python.linting.mypyEnabled": true,
+		"outline.showStrings": false,
+		"outline.showStructs": false,
+		"outline.showVariables": false,
+		"python.autoComplete.extraPaths": [
+
+		],
+		"python.analysis.extraPaths": []
+	}
+}

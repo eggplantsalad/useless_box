@@ -41,7 +41,7 @@ class Servo(board_io_base.ServoBase):
         super().set_angle(degrees)
         screen.fill('black')
         r = (degrees - config.angle_max) / (config.angle_off - config.angle_max)
-        screen.fill('red', rect=(0, 90, int(r * 500), 20))
+        screen.fill('red', rect=(0, 90, int((1 - r) * 500), 20))
         pygame.display.flip()
 
 
@@ -56,4 +56,3 @@ def poll_pygame():
 pygame.init()
 pygame.display.set_caption('Useless box')
 screen = pygame.display.set_mode((500, 200))
-

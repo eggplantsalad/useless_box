@@ -8,20 +8,21 @@ import board_io
 from log import log
 import time
 import config
-if config.native:
-    Optional = type
-else:
+if config.have_typing:
     from typing import Optional
+else:
+    Optional = type  # type: ignore
 
 # patterns for turning off: ID, list of {time, target angle} pairs
 # time: seconds for movement. 'None': as fast as possible
 # angle: 0..1 for min..max (with 1 turning off). 'None': No change
-patterns: dict[str, list] = {
+patterns: dict[str, list[tuple[Optional[float], Optional[float]]]] = {
     'simple_off': [(None, 1), (None, 0)],
     'delayed_off': [(2, None), (None, 1), (None, 0)],
     'teaser': [(1, None), (None, 0.5), (1, 0), (.5, 0.9), (2, None), (None, 1), (None, 0)],
     'shy': [(1, 0.2), (2, None), (1, 0.3), (1, None), (1, 0.5), (1, None), (1, 1), (.5, 0)],
     'wiggle': [(.5, .5), (.3, .7), (.3, .5), (.3, .7), (.3, .5), (.3, .7), (.3, .5), (.3, .7), (.3, .5), (1, 1), (.5, 0)],
+    'pushpushpush': [(None, 0.8), (1, None), (0.2, 1), (0.2, 0.7), (0.2, 0.96), (0.2, 0.7), (0.2, 0.96)]
 }
 
 

@@ -28,6 +28,12 @@ if native:
 
     # CP has no typing module
     have_typing = False
+
+    # move with the specified speeds
+    wait_time_multiplier = 1.
 else:
     # Assuming typing module presence
     have_typing = True
+
+    # decrease wait time for less tedious testing on Windows
+    wait_time_multiplier = .01

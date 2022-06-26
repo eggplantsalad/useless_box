@@ -6,6 +6,7 @@
 
 import board_io
 from log import log
+import math
 import time
 import config
 if config.have_typing:
@@ -33,10 +34,12 @@ class ArmMover:
     def execute_move(self, time_in_s: Optional[float], angle_from: float, angle_to: float):
         if time_in_s is None:
             # move as fast as possible: Set output angle and wait for the servo to respond
-            wait_time = abs(angle_to - angle_from) * self.servo.time_per_degree
+            wait_time = abs(angle_to - angle_from) * self.servo.time_per_degree * config.wait_time_multiplier
             self.servo.set_angle(angle_to)
             time.sleep(wait_time)
             return
+
+        time_in_s *= config.wait_time_multiplier
 
         if angle_from == angle_to:
             # no move, wait
@@ -81,27 +84,71 @@ class Rnd():
         if self.seed == 0:
             self.seed = 1
 
-    # return a random number 0..(count-1)
-    def get(self, count: int) -> int:
+    # return a random int 0..0xFFFFFFFF
+    def get32(self) -> int:
         self.seed ^= self.seed << 13
         self.seed ^= self.seed >> 17
         self.seed ^= self.seed << 5
         self.seed &= 0xFFFFFFFF
-        return self.seed % count
+        return self.seed
+
+    # return a random int 0 <= result < max
+    def get(self, max: int) -> int:
+        return self.get32() % max
+
+    # return a random float 0 <= result < max
+    def get_float(self, max: float) -> float:
+        return self.get(0xFFFFFFFF) * max / 0x100000000
+
+
+# Given the historic counts of the moves, randomly pick the next pattern
+# Although we could calculate the total # of moves, we can easily count it & save some time
+#
+# Goal: Prefer those moves that hadn't been picked often. Specifically, a move that hasn't been
+# executed often is selected with higher probability.
+def pick_next_move(pattern_used: list[int], moves_total: int, rnd: Rnd) -> int:
+    nrs: list[tuple[int, float]] = list()
+    p: float = 0
+    s_2 = 0
+    avg = moves_total / len(pattern_used)
+    for nr, count in enumerate(pattern_used):
+        chance = (avg / (count + 1)) ** 3
+        s_2 += count**2
+        p += chance
+        log('  nr=%d (%-12s), count=%d, chance=%.3f, p=%.3f' % (nr, list(patterns.keys())[nr], count, chance, p))
+        nrs.append((nr, p))
+
+    log('s^2=%d, total^2=%d, sqrt(total^2/s^2*len)=%.3f' %
+        (s_2, moves_total**2, math.sqrt((moves_total**2) / s_2 / len(pattern_used))), level=2)
+
+    r = rnd.get_float(p)
+    log('p=%.3f, r=%.3f' % (p, r), level=2)
+    for idx, (nr, p) in enumerate(nrs):
+        log('idx = %d, nr=%d, p=%.3f' % (idx, nr, p), level=3)
+        if r <= p:
+            return nr
+    assert(False)
+    return 0
 
 
 servo = board_io.Servo(config.servo_time_60deg)
 mover = ArmMover(servo)
 rnd = Rnd()
 key_list = list(patterns.keys())
+pattern_used: list[int] = [0] * len(patterns)
+moves_total = 0
 nr = 0
 while True:
     id = key_list[nr]
     mover.execute_pattern(id)
+    moves_total += 1
+    pattern_used[nr] += 1
     log('Closed')
     if not board_io.await_switch(config.power_off_time_s):
         log('Powering off')
         board_io.power_off()
         exit()
+
+    # pick next move
     rnd.entropy(time.monotonic_ns())
-    nr = rnd.get(len(patterns))
+    nr = pick_next_move(pattern_used, moves_total, rnd)
